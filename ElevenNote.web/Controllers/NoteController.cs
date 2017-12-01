@@ -16,8 +16,9 @@ namespace ElevenNote.web.Controllers
         public ActionResult Index()
         {
             var userId = Guid.Parse(User.Identity.GetUserId());
-            var model = new NoteListItem[0];
             var service = new NoteService(userId);
+            var model = service.GetNotes();
+
             return View(model);
         }
 
@@ -30,16 +31,38 @@ namespace ElevenNote.web.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Create(NoteCreate model)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid) return View(model);
+
+            var service = CreateNoteService();
+
+            if (service.CreateNote(model))
             {
-                return View(model);
+                //How do we share data with the view without being part of the model?
+                TempData["SaveResult"] = "Your note was created.";
+                return RedirectToAction("Index");
             }
 
+            //Overload with two strings
+            //Custom Message
+            ModelState.AddModelError("", "Note could not be created");
+
+            //if it fails, we go back to the model
+            return View(model);
+        }
+
+        public ActionResult Details(int id)
+        {
+            var service = CreateNoteService();
+            var model = service.GetNoteById(id);
+
+            return View(model);
+        }
+
+        private NoteService CreateNoteService()
+        {
             var userId = Guid.Parse(User.Identity.GetUserId());
             var service = new NoteService(userId);
-            service.CreateNote(model);
-
-            return RedirectToAction("Index");
+            return service;
         }
     }
 }
